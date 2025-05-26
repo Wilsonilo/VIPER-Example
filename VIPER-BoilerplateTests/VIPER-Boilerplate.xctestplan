@@ -1,0 +1,29 @@
+{
+  "configurations" : [
+    {
+      "id" : "539D7834-1FFC-4AE7-84A2-5E40B901AC77",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:VIPER-Boilerplate.xcodeproj",
+      "identifier" : "BE2D75762DE137B4009550D8",
+      "name" : "VIPER-Boilerplate"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:VIPER-Boilerplate.xcodeproj",
+        "identifier" : "BE2D758C2DE137B8009550D8",
+        "name" : "VIPER-BoilerplateTests"
+      }
+    }
+  ],
+  "version" : 1
+}
