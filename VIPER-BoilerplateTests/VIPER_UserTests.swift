@@ -13,26 +13,26 @@ final class VIPER_UserTests: XCTestCase {
 
     // MARK: - View Tests
         
-    func test_view_init_hasNoErrorsAndEntities() {
-        let (sut, _, _, _, _) = makeSUT()
+    func test_viewInit_givenNewInstance_thenHasEmptyErrorsAndUpdates() {
+        let sut   = makeAnyUserViewSpySUT()
         XCTAssert(sut.capturedErrors.isEmpty)
         XCTAssert(sut.capturedUpdates.isEmpty)
     }
     
-    func test_view_update_capturesUsers() {
-        let (sut, _, _, entity, _) = makeSUT()
-        let users = [entity]
+    func test_viewUpdate_givenUsers_thenCapturesUsersCorrectly() {
+        let sut   = makeAnyUserViewSpySUT()
+        let users = [makeAnyUserEntitySpySUT(entityName: "Jasmine")]
         
         sut.update(with: users)
         
         XCTAssertEqual(sut.capturedUpdates.count, 1)
         XCTAssertEqual(sut.capturedUpdates.first?.count, 1)
-        XCTAssertEqual(sut.capturedUpdates.first?.first?.name, entity.name)
+        XCTAssertEqual(sut.capturedUpdates.first?.first?.name, "Jasmine")
     }
     
-    func test_view_error_capturesError() {
-       let (sut, _, _, _, _) = makeSUT()
-       let error = anyError()
+    func test_viewError_givenError_thenCapturesError(){
+        let sut   = makeAnyUserViewSpySUT()
+       let error  = anyError()
        
        sut.weGotErrorFetchingUsers(with: error)
        
@@ -44,10 +44,7 @@ final class VIPER_UserTests: XCTestCase {
 
     /// Test success passing mock data
     func test_interactor_getUsers_success_notifiesPresenterWithUsers(){
-        let mockURLSession   = MockURLSession()
-        let interactor       = UserInteractor(urlSession:mockURLSession)
-        let presenterSpy     = AnyUserPresenterSpy()
-        interactor.presenter = presenterSpy
+        let (interactor, presenterSpy, mockURLSession) = makeAnyUserInteractorWithPresenter()
         
         /// Create the data
         guard let mockData = """
@@ -93,10 +90,7 @@ final class VIPER_UserTests: XCTestCase {
     /// Test we get our error
     func test_interactor_getUsers_networkError_notifiesPresenterWithError(){
         
-        let mockURLSession   = MockURLSession()
-        let interactor       = UserInteractor(urlSession: mockURLSession)
-        let presenterSpy     = AnyUserPresenterSpy()
-        interactor.presenter = presenterSpy
+        let (interactor, presenterSpy, mockURLSession) = makeAnyUserInteractorWithPresenter()
         
         /// Inject error, deliver no data
         mockURLSession.data = nil
@@ -129,11 +123,8 @@ final class VIPER_UserTests: XCTestCase {
     
     /// Test against decoding
     func test_interactor_getUsers_invalidJSON_notifiesPresenterWithError() {
-        let mockURLSession = MockURLSession()
-        let interactor = UserInteractor(urlSession: mockURLSession)
-        let presenterSpy = AnyUserPresenterSpy()
-        interactor.presenter = presenterSpy
         
+        let (interactor, presenterSpy, mockURLSession) = makeAnyUserInteractorWithPresenter()
         
         /// Create the data
         guard let mockData = "invalid json".data(using: .utf8) else {
@@ -212,20 +203,41 @@ final class VIPER_UserTests: XCTestCase {
     private func anyError()->NSError {
         NSError(domain: "", code: 0)
     }
-    private func makeSUT(entityName:String = "John")->(
-        AnyUserViewSpy,
-        AnyUserInteractorSpy,
-        AnyUserPresenterSpy,
-        AnyUserEntity,
-        AnyUserRouterSpy
-    ) {
-        let V = AnyUserViewSpy()
-        let I = AnyUserInteractorSpy()
-        let P = AnyUserPresenterSpy()
-        let E = UserEntity(name: entityName)
-        let R = AnyUserRouterSpy()
-        return (V,I,P,E,R)
+    
+    private func makeAnyUserViewSpySUT()->AnyUserViewSpy {
+        AnyUserViewSpy()
     }
+    
+    private func makeAnyUserInteractorSpySUT(endpoint:String = "https://jsonplaceholder.typicode.com/users")->(AnyUserInteractorSpy, MockURLSession) {
+        let mockURLSession   = MockURLSession()
+        return (AnyUserInteractorSpy(
+            presenter: nil,
+            urlSession: mockURLSession,
+            endpoint: endpoint
+        ), mockURLSession)
+    }
+    
+    private func makeAnyUserPresenterSpySUT()->AnyUserPresenterSpy {
+        AnyUserPresenterSpy()
+    }
+    
+    private func makeAnyUserEntitySpySUT(entityName:String = "John")->AnyUserEntity {
+        UserEntity(name: entityName)
+    }
+    
+    private func makeAnyUserRouterSpySUT()->AnyUserRouterSpy {
+        AnyUserRouterSpy()
+    }
+    
+    private func makeAnyUserInteractorWithPresenter(endpoint:String = "https://jsonplaceholder.typicode.com/users")->(AnyUserInteractorSpy, AnyUserPresenterSpy, MockURLSession){
+        let (interactorSpy, mockURLSession)       = makeAnyUserInteractorSpySUT(endpoint: endpoint)
+        let presenterSpy        = AnyUserPresenterSpy()
+        interactorSpy.presenter = presenterSpy
+        return(interactorSpy, presenterSpy, mockURLSession)
+    }
+    
+    
+
     
     // MARK: - Private SPY Classes -
     /// V is for Vendetta, I mean for View
@@ -245,9 +257,17 @@ final class VIPER_UserTests: XCTestCase {
     
     /// I is for Interactor.
     private class AnyUserInteractorSpy: AnyUserInteractor {
+        var urlSession: URLSessionProtocol
+        var endpoint: String
         var presenter: (any AnyUserPresenter)?
-        func getUsers() {
-            // Spy implementation - doesn't do actual network call
+        required init(
+            presenter: (any AnyUserPresenter)? = nil,
+            urlSession: URLSessionProtocol  = URLSession.withStandardConfiguration(),
+            endpoint: String = "https://jsonplaceholder.typicode.com/users"
+        ) {
+            self.presenter  = presenter
+            self.urlSession = urlSession
+            self.endpoint   = endpoint
         }
     }
     
@@ -282,6 +302,7 @@ final class VIPER_UserTests: XCTestCase {
         static func start() -> any AnyUserRouter {
             let router = AnyUserRouterSpy()
             let view: AnyUserView = AnyUserViewSpy()
+            
             let interactor: AnyUserInteractor = AnyUserInteractorSpy()
             let presenter: AnyUserPresenter = AnyUserPresenterSpy(
                 interactor: interactor,
@@ -297,28 +318,32 @@ final class VIPER_UserTests: XCTestCase {
         }
     }
     
-    // MARK: - Mock Classes
+    // MARK: - Mock Classes -
 
-    class MockURLSession: URLSession {
+    /// Mock a URL Session Data task that we can inject errors, responses and data.
+    class MockURLSession: URLSessionProtocol {
+    
         var data: Data?
         var response: URLResponse?
         var error: Error?
         
-        override func dataTask(with request: URLRequest, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) -> URLSessionDataTask {
+        func dataTask(with request: URLRequest, completionHandler: @escaping (Data?, URLResponse?, (any Error)?) -> Void) -> any URLSessionDataTaskProtocol {
             return MockURLSessionDataTask {
                 completionHandler(self.data, self.response, self.error)
             }
         }
     }
 
-    class MockURLSessionDataTask: URLSessionDataTask {
+    ///In our mock, we need to simulate a network call without making a real network request.
+    ///So we init we a closure, capture it and return it with resume.
+    class MockURLSessionDataTask: URLSessionDataTaskProtocol {
         private let closure: () -> Void
         
         init(closure: @escaping () -> Void) {
             self.closure = closure
         }
         
-        override func resume() {
+        func resume() {
             closure()
         }
     }

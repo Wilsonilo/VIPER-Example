@@ -15,12 +15,21 @@ import Foundation
 /// https:///jsonplaceholder.typicode.com/users
 
 protocol AnyUserInteractor: AnyObject {
+    
     var presenter:AnyUserPresenter? { get set }
+    var urlSession: URLSessionProtocol { get }
+    var endpoint: String { get }
     
     /// We don't have completion here because we want to tell the presenter
     /// that we have fetched the information and deliver that information
     /// to the presenter, the presenter then will inform the view
     func getUsers()->Void
+    
+    init(
+        presenter: AnyUserPresenter?,
+        urlSession: URLSessionProtocol,
+        endpoint: String
+    )
 }
 
 
@@ -29,21 +38,7 @@ enum UserInteractorError:Error {
     case invalidURL
 }
 
-class UserInteractor: AnyUserInteractor {
-    var presenter: (any AnyUserPresenter)?
-    private let urlSession: URLSession
-    private let endpoint: String
-    
-    init(
-        presenter: AnyUserPresenter? = nil,
-        urlSession: URLSession = .shared,
-        endpoint: String = "https://jsonplaceholder.typicode.com/users"
-    ) {
-        self.presenter = presenter
-        self.urlSession = urlSession
-        self.endpoint = endpoint
-    }
-    
+extension AnyUserInteractor {
     func getUsers() {
         guard let url = URL(string: endpoint) else {
             presenter?.interactorDidFetchUsers(with: .failure(UserInteractorError.invalidURL))
@@ -66,4 +61,22 @@ class UserInteractor: AnyUserInteractor {
         }
         task.resume()
     }
+}
+
+class UserInteractor: AnyUserInteractor {
+    
+    var presenter: (any AnyUserPresenter)?
+    private(set) var urlSession: URLSessionProtocol
+    private(set) var endpoint: String
+    
+    required init(
+        presenter: AnyUserPresenter?   = nil,
+        urlSession: URLSessionProtocol = URLSession.withStandardConfiguration(),
+        endpoint: String               = "https://jsonplaceholder.typicode.com/users"
+    ) {
+        self.presenter  = presenter
+        self.urlSession = urlSession
+        self.endpoint   = endpoint
+    }
+    
 }

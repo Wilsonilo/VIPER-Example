@@ -19,23 +19,6 @@ protocol AnyUserView: AnyObject {
     func weGotErrorFetchingUsers(with error:Error)
 }
 
-extension UserViewController: UITableViewDataSource, UITableViewDelegate {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        self.users.count
-    }
-
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(
-            withIdentifier: "cell",
-            for: indexPath
-        )
-        let user = users[indexPath.row]
-        cell.textLabel?.text = user.name
-        return cell
-    }
-    
-}
-
 class UserViewController:UIViewController, AnyUserView {
     
     private var users = [AnyUserEntity]()
@@ -54,6 +37,8 @@ class UserViewController:UIViewController, AnyUserView {
         tableView.dataSource      = self
         tableView.delegate        = self
         self.view.addSubview(tableView)
+        self.presenter?.interactor?.getUsers()
+
     }
     
     override func viewDidLayoutSubviews() {
@@ -71,9 +56,32 @@ class UserViewController:UIViewController, AnyUserView {
 
     }
     
-    func weGotErrorFetchingUsers(with error:Error) {
-        print("Got error fetching users ", error)
+    func weGotErrorFetchingUsers(with error: Error) {
+        DispatchQueue.main.async { [weak self] in
+            let alert = UIAlertController(
+                title: "Error",
+                message: "Failed to load users. Please try again.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            self?.present(alert, animated: true)
+        }
     }
 }
 
+extension UserViewController: UITableViewDataSource, UITableViewDelegate {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        self.users.count
+    }
 
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(
+            withIdentifier: "cell",
+            for: indexPath
+        )
+        let user = users[indexPath.row]
+        cell.textLabel?.text = user.name
+        return cell
+    }
+    
+}

@@ -49,9 +49,10 @@ class UserPresenter:AnyUserPresenter {
         router: AnyUserRouter?,
         view: AnyUserView?
     ) {
+        
         self.interactor = interactor
         self.router     = router
         self.view       = view
-        self.interactor?.getUsers()
+        
     }
 }
